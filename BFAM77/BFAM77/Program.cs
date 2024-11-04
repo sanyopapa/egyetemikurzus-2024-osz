@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 
+using BFAM77;
+
 namespace VideoTeka
 {
     internal class Program
@@ -64,98 +66,15 @@ namespace VideoTeka
 
         private static void AddNewFilm()
         {
-            string cim, mufaj, rendezo, leiras;
-            int kiadasEve, hossz;
-            bool elerheto;
-
-            string GetInput(string prompt, bool isMandatory = false)
-            {
-                while (true)
-                {
-                    Console.Write(prompt);
-                    var input = Console.ReadLine();
-
-                    if (string.IsNullOrWhiteSpace(input))
-                    {
-                        if (isMandatory)
-                        {
-                            Console.WriteLine("Ez a mező kötelező!");
-                            continue;
-                        }
-
-                        Console.Write("Biztos üresen akarja hagyni? (igen/nem): ");
-                        var confirm = Console.ReadLine();
-                        if (confirm.Equals("igen", StringComparison.OrdinalIgnoreCase))
-                        {
-                            return "-";
-                        }
-                    }
-                    else
-                    {
-                        return input;
-                    }
-                }
-            }
-
-            int GetIntInput(string prompt)
-            {
-                while (true)
-                {
-                    Console.Write(prompt);
-                    var input = Console.ReadLine();
-
-                    if (string.IsNullOrWhiteSpace(input))
-                    {
-                        Console.Write("Biztos üresen akarja hagyni? (igen/nem): ");
-                        var confirm = Console.ReadLine();
-                        if (confirm.Equals("igen", StringComparison.OrdinalIgnoreCase))
-                        {
-                            return 0;
-                        }
-                        if (confirm.Equals("nem", StringComparison.OrdinalIgnoreCase))
-                        {
-                            continue;
-                        }
-                    }
-                    else if (int.TryParse(input, out var result))
-                    {
-                        return result;
-                    }
-                    else
-                    {
-                        Console.WriteLine("Érvénytelen szám. Próbálja újra.");
-                    }
-                }
-            }
-
             try
             {
-                cim = GetInput("Film címe: ");
-                mufaj = GetInput("Műfaj: ");
-                rendezo = GetInput("Rendező: ");
-                kiadasEve = GetIntInput("Kiadás éve: ");
-                hossz = GetIntInput("Hossz (percben): ");
-                leiras = GetInput("Leírás: ");
-
-                while (true)
-                {
-                    Console.Write("Elérhető (igen/nem): ");
-                    var availableInput = Console.ReadLine();
-                    if (availableInput.Equals("igen", StringComparison.OrdinalIgnoreCase))
-                    {
-                        elerheto = true;
-                        break;
-                    }
-                    else if (availableInput.Equals("nem", StringComparison.OrdinalIgnoreCase))
-                    {
-                        elerheto = false;
-                        break;
-                    }
-                    else
-                    {
-                        Console.WriteLine("Érvénytelen válasz. Kérem, válaszoljon 'igen' vagy 'nem'.");
-                    }
-                }
+                var cim = InputHelper.GetStringInput("Film címe: ");
+                var mufaj = InputHelper.GetStringInput("Műfaj: ");
+                var rendezo = InputHelper.GetStringInput("Rendező: ");
+                var kiadasEve = InputHelper.GetIntInput("Kiadás éve: ");
+                var hossz = InputHelper.GetIntInput("Hossz (percben): ");
+                var leiras = InputHelper.GetStringInput("Leírás: ");
+                var elerheto = InputHelper.GetBoolInput("Elérhető (igen/nem): ");
 
                 var newFilm = new Film
                 {
@@ -216,7 +135,63 @@ namespace VideoTeka
 
         private static void RentFilm()
         {
-            Console.WriteLine("Film kölcsönzése");
+            var filePath = "films.json";
+            if (!File.Exists(filePath))
+            {
+                Console.WriteLine("Nincsenek elérhető filmek.");
+                return;
+            }
+
+            Console.Write("Add meg a film címét: ");
+            var cim = Console.ReadLine();
+
+            if (string.IsNullOrWhiteSpace(cim))
+            {
+                Console.WriteLine("Hiba: A cím megadása kötelező.");
+                return;
+            }
+
+            var json = File.ReadAllText(filePath);
+            var films = JsonSerializer.Deserialize<List<Film>>(json);
+
+            var matchingFilms = films.Where(f => f.Cim.Equals(cim, StringComparison.OrdinalIgnoreCase)).ToList();
+
+            if (!matchingFilms.Any())
+            {
+                Console.WriteLine("Nincs ilyen című film.");
+                return;
+            }
+
+            var availableFilms = matchingFilms.Where(f => f.Elerheto).ToList();
+
+            if (!availableFilms.Any())
+            {
+                Console.WriteLine("Ez a film nem elérhető.");
+                return;
+            }
+
+            if (availableFilms.Count == 1)
+            {
+                RentSelectedFilm(availableFilms.First());
+            }
+            else
+            {
+                Console.WriteLine("Több elérhető film található:");
+                for (int i = 0; i < availableFilms.Count; i++)
+                {
+                    Console.WriteLine($"{i + 1}. {availableFilms[i].Cim} - {availableFilms[i].Rendezo} ({availableFilms[i].KiadasEve})");
+                }
+
+                Console.Write("Válassz egy filmet a szám alapján: ");
+                if (int.TryParse(Console.ReadLine(), out int selectedIndex) && selectedIndex > 0 && selectedIndex <= availableFilms.Count)
+                {
+                    RentSelectedFilm(availableFilms[selectedIndex - 1]);
+                }
+                else
+                {
+                    Console.WriteLine("Érvénytelen választás.");
+                }
+            }
         }
 
         private static void ReturnFilm()
@@ -237,6 +212,38 @@ namespace VideoTeka
         private static void ModifyFilm()
         {
             Console.WriteLine("Film módosítása");
+        }
+
+        private static void RentSelectedFilm(Film film)
+        {
+            film.Elerheto = false;
+
+            var filePath = "films.json";
+            var json = File.ReadAllText(filePath);
+            var films = JsonSerializer.Deserialize<List<Film>>(json);
+
+            var filmToUpdate = films.First(f => f.Cim.Equals(film.Cim, StringComparison.OrdinalIgnoreCase));
+            filmToUpdate.Elerheto = false;
+
+            var updatedJson = JsonSerializer.Serialize(films, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(filePath, updatedJson);
+
+            var kolcsonzesFilePath = "kolcsonzesek.json";
+            var kolcsonzesek = new List<Kolcsonzes>();
+
+            if (File.Exists(kolcsonzesFilePath))
+            {
+                var kolcsonzesJson = File.ReadAllText(kolcsonzesFilePath);
+                kolcsonzesek = JsonSerializer.Deserialize<List<Kolcsonzes>>(kolcsonzesJson);
+            }
+
+            var newKolcsonzes = new Kolcsonzes(film, DateTime.Now, DateTime.Now.AddDays(7));
+            kolcsonzesek.Add(newKolcsonzes);
+
+            var updatedKolcsonzesJson = JsonSerializer.Serialize(kolcsonzesek, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(kolcsonzesFilePath, updatedKolcsonzesJson);
+
+            Console.WriteLine("A film sikeresen kibérelve.");
         }
     }
 }

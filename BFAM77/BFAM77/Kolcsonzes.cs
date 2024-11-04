@@ -8,13 +8,13 @@ namespace VideoTeka
 {
     public class Kolcsonzes
     {
-        public string FilmCim { get; set; }
+        public Film KolcsonzottFilm { get; set; }
         public DateTime KolcsonzesDatuma { get; set; }
         public DateTime Hatarido { get; set; }
 
-        public Kolcsonzes(string filmCim, DateTime kolcsonzesDatuma, DateTime hatarido)
+        public Kolcsonzes(Film film, DateTime kolcsonzesDatuma, DateTime hatarido)
         {
-            FilmCim = filmCim;
+            KolcsonzottFilm = film;
             KolcsonzesDatuma = kolcsonzesDatuma;
             Hatarido = hatarido;
         }
