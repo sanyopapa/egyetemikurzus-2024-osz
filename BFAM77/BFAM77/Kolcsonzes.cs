@@ -21,6 +21,18 @@ namespace VideoTeka
             Hatarido = hatarido;
             Lezarult = false;
         }
+        public Kolcsonzes() { }
+
+        public void Adatok()
+        {
+            if (Lezarult)
+            {
+                Console.WriteLine($"Kölcsönző neve: {KolcsonzoNeve}\nKölcsönzött film: {KolcsonzottFilm.Cim}\nKölcsönzés dátuma: {KolcsonzesDatuma}\nHatáridő: {Hatarido}\nLezárt: Igen");
+            }else
+            {
+                Console.WriteLine($"Kölcsönző neve: {KolcsonzoNeve}\nKölcsönzött film: {KolcsonzottFilm.Cim}\nKölcsönzés dátuma: {KolcsonzesDatuma}\nHatáridő: {Hatarido}\nLezárt: Nem");
+            }
+        }
     }
 }
 

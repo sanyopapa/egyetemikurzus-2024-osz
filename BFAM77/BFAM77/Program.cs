@@ -6,6 +6,9 @@ using System.Text.Json;
 
 using BFAM77;
 
+//agregáció (Pl.: Min(), Max(), First(), FirstOrDefault, Average(), stb...) közül legalább kettő
+//legyen benne saját immutable type (pl.: record class)
+
 namespace VideoTeka
 {
     internal class Program
@@ -13,20 +16,26 @@ namespace VideoTeka
         private static void Main(string[] args)
         {
             var commands = new Dictionary<string, Action>(StringComparer.OrdinalIgnoreCase)
-                {
-                    { "help", ShowHelp },
-                    { "add_new_film", AddNewFilm },
-                    { "show_all_films", ShowAllFilms },
-                    { "rent_film", RentFilm },
-                    { "return_film", ReturnFilm },
-                    { "search_film", SearchFilm },
-                    { "delete_film", DeleteFilm },
-                    { "modify_film", ModifyFilm },
-                    { "exit", Exit }
-                };
+            {
+                { "help", ShowHelp },
+                { "add_new_film", AddNewFilm },
+                { "show_all_films", ShowAllFilms },
+                { "rent_film", RentFilm },
+                { "return_film", ReturnFilm },
+                { "search_film", SearchFilm },
+                { "delete_film", DeleteFilm },
+                { "modify_film", ModifyFilm },
+                { "show_all_rents", ShowAllRents },
+                { "show_unreturned_rents", ShowUnreturnedRents },
+                { "show_returned_rents", ShowReturnedRents },
+                { "show_overdue_rents", ShowOverdueRents },
+                { "show_active_rents", ShowActiveRents }, 
+                { "search_rents", SearchRents },
+                { "exit", Exit }
+            };
 
             Console.WriteLine("Ez itt a Képszínház videotéka alkalmazása.");
-            Console.WriteLine("Írj be 'help'-et a parancsok listájához.");
+            Console.WriteLine("A 'help' parancs segítségével megnézheted, milyen parancsok adhatók ki.");
 
             while (true)
             {
@@ -55,6 +64,12 @@ namespace VideoTeka
             Console.WriteLine("\tsearch_film - Film keresése");
             Console.WriteLine("\tdelete_film - Film törlése");
             Console.WriteLine("\tmodify_film - Film módosítása");
+            Console.WriteLine("\tshow_all_rents - Összes kölcsönzés megjelenítése");
+            Console.WriteLine("\tshow_unreturned_rents - Vissza nem hozott kölcsönzések megjelenítése");
+            Console.WriteLine("\tshow_returned_rents - Visszahozott kölcsönzések megjelenítése");
+            Console.WriteLine("\tshow_overdue_rents - Lejárt kölcsönzések megjelenítése(Amik lejártak, de még nem hozták őket vissza)");
+            Console.WriteLine("\tshow_active_rents - Aktív kölcsönzések megjelenítése(Amiket még nem hoztak vissza, és nem jártak le)");
+            Console.WriteLine("\tsearch_rents - Kölcsönzések keresése(a bérlő neve szerint)");
             Console.WriteLine("\texit - Kilépés az alkalmazásból");
         }
 
@@ -407,6 +422,199 @@ namespace VideoTeka
         private static void ModifyFilm()
         {
             Console.WriteLine("Film módosítása");
+        }
+
+        private static void ShowAllRents()
+        {
+            var kolcsonzesFilePath = "kolcsonzesek.json";
+            if (!File.Exists(kolcsonzesFilePath))
+            {
+                Console.WriteLine("Nincsenek kölcsönzések.");
+                return;
+            }
+
+            var kolcsonzesJson = File.ReadAllText(kolcsonzesFilePath);
+            var kolcsonzesek = JsonSerializer.Deserialize<List<Kolcsonzes>>(kolcsonzesJson);
+
+            var allRents = kolcsonzesek
+                .OrderBy(k => k.KolcsonzesDatuma)
+                .ToList();
+
+            if (!allRents.Any())
+            {
+                Console.WriteLine("Nincsenek kölcsönzések.");
+                return;
+            }
+
+            Console.WriteLine("Összes kölcsönzés:");
+            foreach (var kolcsonzes in allRents)
+            {
+                kolcsonzes.Adatok();
+            }
+        }
+
+        private static void SearchRents()
+        {
+            var kolcsonzesFilePath = "kolcsonzesek.json";
+            if (!File.Exists(kolcsonzesFilePath))
+            {
+                Console.WriteLine("Nincsenek kölcsönzések.");
+                return;
+            }
+
+            string kolcsonzoNeve;
+            while (true)
+            {
+                Console.Write("Add meg a kölcsönző nevét: ");
+                kolcsonzoNeve = Console.ReadLine();
+
+                if (!string.IsNullOrWhiteSpace(kolcsonzoNeve))
+                {
+                    break;
+                }
+
+                Console.WriteLine("Hiba: A név megadása kötelező.");
+            }
+
+            var kolcsonzesJson = File.ReadAllText(kolcsonzesFilePath);
+            var kolcsonzesek = JsonSerializer.Deserialize<List<Kolcsonzes>>(kolcsonzesJson);
+
+            var userRents = kolcsonzesek
+                .Where(k => k.KolcsonzoNeve.Equals(kolcsonzoNeve, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(k => k.KolcsonzesDatuma)
+                .ToList();
+
+            if (!userRents.Any())
+            {
+                Console.WriteLine("Nincsenek kölcsönzések ehhez a névhez.");
+                return;
+            }
+
+            Console.WriteLine($"{kolcsonzoNeve} kölcsönzései:");
+            foreach (var kolcsonzes in userRents)
+            {
+                kolcsonzes.Adatok();
+            }
+        }
+
+        private static void ShowOverdueRents()
+        {
+            var kolcsonzesFilePath = "kolcsonzesek.json";
+            if (!File.Exists(kolcsonzesFilePath))
+            {
+                Console.WriteLine("Nincsenek kölcsönzések.");
+                return;
+            }
+
+            var kolcsonzesJson = File.ReadAllText(kolcsonzesFilePath);
+            var kolcsonzesek = JsonSerializer.Deserialize<List<Kolcsonzes>>(kolcsonzesJson);
+
+            var overdueRents = kolcsonzesek
+                .Where(k => !k.Lezarult && DateTime.Now > k.Hatarido)
+                .OrderBy(k => k.KolcsonzesDatuma)
+                .ToList();
+
+            if (!overdueRents.Any())
+            {
+                Console.WriteLine("Nincsenek határidőből kifutott bérlések.");
+                return;
+            }
+
+            Console.WriteLine("Határidőből kifutott bérlések:");
+            foreach (var kolcsonzes in overdueRents)
+            {
+                kolcsonzes.Adatok();
+            }
+        }
+
+        private static void ShowActiveRents()
+        {
+            var kolcsonzesFilePath = "kolcsonzesek.json";
+            if (!File.Exists(kolcsonzesFilePath))
+            {
+                Console.WriteLine("Nincsenek kölcsönzések.");
+                return;
+            }
+
+            var kolcsonzesJson = File.ReadAllText(kolcsonzesFilePath);
+            var kolcsonzesek = JsonSerializer.Deserialize<List<Kolcsonzes>>(kolcsonzesJson);
+
+            var activeRents = kolcsonzesek
+                .Where(k => !k.Lezarult && DateTime.Now <= k.Hatarido)
+                .OrderBy(k => k.KolcsonzesDatuma)
+                .ToList();
+
+            if (!activeRents.Any())
+            {
+                Console.WriteLine("Nincsenek aktív kölcsönzések.");
+                return;
+            }
+
+            Console.WriteLine("Aktív kölcsönzések:");
+            foreach (var kolcsonzes in activeRents)
+            {
+                kolcsonzes.Adatok();
+            }
+        }
+
+        private static void ShowReturnedRents()
+        {
+            var kolcsonzesFilePath = "kolcsonzesek.json";
+            if (!File.Exists(kolcsonzesFilePath))
+            {
+                Console.WriteLine("Nincsenek kölcsönzések.");
+                return;
+            }
+
+            var kolcsonzesJson = File.ReadAllText(kolcsonzesFilePath);
+            var kolcsonzesek = JsonSerializer.Deserialize<List<Kolcsonzes>>(kolcsonzesJson);
+
+            var returnedRents = kolcsonzesek
+                .Where(k => k.Lezarult)
+                .OrderBy(k => k.KolcsonzesDatuma)
+                .ToList();
+
+            if (!returnedRents.Any())
+            {
+                Console.WriteLine("Nincsenek lezárult kölcsönzések.");
+                return;
+            }
+
+            Console.WriteLine("Lezárult kölcsönzések:");
+            foreach (var kolcsonzes in returnedRents)
+            {
+                kolcsonzes.Adatok();
+            }
+        }
+
+        private static void ShowUnreturnedRents()
+        {
+            var kolcsonzesFilePath = "kolcsonzesek.json";
+            if (!File.Exists(kolcsonzesFilePath))
+            {
+                Console.WriteLine("Nincsenek kölcsönzések.");
+                return;
+            }
+
+            var kolcsonzesJson = File.ReadAllText(kolcsonzesFilePath);
+            var kolcsonzesek = JsonSerializer.Deserialize<List<Kolcsonzes>>(kolcsonzesJson);
+
+            var unreturnedRents = kolcsonzesek
+                .Where(k => !k.Lezarult)
+                .OrderBy(k => k.KolcsonzesDatuma)
+                .ToList();
+
+            if (!unreturnedRents.Any())
+            {
+                Console.WriteLine("Nincsenek még nem lezárult kölcsönzések.");
+                return;
+            }
+
+            Console.WriteLine("Még nem lezárult kölcsönzések:");
+            foreach (var kolcsonzes in unreturnedRents)
+            {
+                kolcsonzes.Adatok();
+            }
         }
 
         private static void RentSelectedFilm(Film film, string kolcsonzoNeve)
