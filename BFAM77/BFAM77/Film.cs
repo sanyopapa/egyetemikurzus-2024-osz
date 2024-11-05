@@ -21,7 +21,7 @@ namespace VideoTeka
 
         public void Adatok()
         {
-            Console.WriteLine($"Cím: {Cim}\nMűfaj: {Mufaj}\nRendező: {Rendezo}\nHossz: {Hossz} perc\nKiadás Éve: {KiadasEve}\nLeírás: {Leiras}\nElérhető: {Elerheto}");
+            Console.WriteLine($"\tCím: {Cim}\n\tMűfaj: {Mufaj}\n\tRendező: {Rendezo}\n\tHossz: {Hossz} perc\n\tKiadás Éve: {KiadasEve}\n\tLeírás: {Leiras}\n\tElérhető: {Elerheto}");
         }
     }
 }

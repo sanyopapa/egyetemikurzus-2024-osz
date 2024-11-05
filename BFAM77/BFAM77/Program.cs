@@ -6,9 +6,6 @@ using System.Text.Json;
 
 using BFAM77;
 
-//agregáció (Pl.: Min(), Max(), First(), FirstOrDefault, Average(), stb...) közül legalább kettő
-//legyen benne saját immutable type (pl.: record class)
-
 namespace VideoTeka
 {
     internal class Program
@@ -20,6 +17,8 @@ namespace VideoTeka
                 { "help", ShowHelp },
                 { "add_new_film", AddNewFilm },
                 { "show_all_films", ShowAllFilms },
+                { "show_shortest_film", ShowMinFilm },
+                { "show_longest_film", ShowMaxFilm },
                 { "rent_film", RentFilm },
                 { "return_film", ReturnFilm },
                 { "search_film", SearchFilm },
@@ -59,6 +58,8 @@ namespace VideoTeka
             Console.WriteLine("\thelp - Parancsok listájának megjelenítése");
             Console.WriteLine("\tadd_new_film - Új film hozzáadása");
             Console.WriteLine("\tshow_all_films - Összes film kiírása");
+            Console.WriteLine("\tshow_shortest_film - Legrövidebb film adatainak kiírása");
+            Console.WriteLine("\tshow_longest_film - Leghosszabb film adatainak kiírása");
             Console.WriteLine("\trent_film - Film kölcsönzése");
             Console.WriteLine("\treturn_film - Film visszahozása");
             Console.WriteLine("\tsearch_film - Film keresése");
@@ -150,6 +151,62 @@ namespace VideoTeka
             {
                 film.Adatok();
                 Console.WriteLine();
+            }
+        }
+
+        private static void ShowMinFilm()
+        {
+            var filmFilePath = "films.json";
+            if (!File.Exists(filmFilePath))
+            {
+                Console.WriteLine("Nincsenek filmek.");
+                return;
+            }
+
+            var filmJson = File.ReadAllText(filmFilePath);
+            var filmek = JsonSerializer.Deserialize<List<Film>>(filmJson);
+
+            if (filmek == null || !filmek.Any())
+            {
+                Console.WriteLine("Nincsenek filmek.");
+                return;
+            }
+
+            var legrövidebbFilmHossz = filmek.Min(f => f.Hossz);
+            var legrövidebbFilmek = filmek.Where(f => f.Hossz == legrövidebbFilmHossz).ToList();
+
+            Console.WriteLine($"Legrövidebb film(ek) ({legrövidebbFilmHossz} perc):");
+            foreach (var film in legrövidebbFilmek)
+            {
+                Console.WriteLine($"\t{film.Cim} - {film.Rendezo}\n");
+            }
+        }
+
+        private static void ShowMaxFilm()
+        {
+            var filmFilePath = "films.json";
+            if (!File.Exists(filmFilePath))
+            {
+                Console.WriteLine("Nincsenek filmek.");
+                return;
+            }
+
+            var filmJson = File.ReadAllText(filmFilePath);
+            var filmek = JsonSerializer.Deserialize<List<Film>>(filmJson);
+
+            if (filmek == null || !filmek.Any())
+            {
+                Console.WriteLine("Nincsenek filmek.");
+                return;
+            }
+
+            var leghosszabbFilmHossz = filmek.Max(f => f.Hossz);
+            var leghosszabbFilmek = filmek.Where(f => f.Hossz == leghosszabbFilmHossz).ToList();
+
+            Console.WriteLine($"Leghosszabb film(ek) ({leghosszabbFilmHossz} perc):");
+            foreach (var film in leghosszabbFilmek)
+            {
+                Console.WriteLine($"\t{film.Cim} - {film.Rendezo}\n");
             }
         }
 
@@ -421,7 +478,70 @@ namespace VideoTeka
 
         private static void ModifyFilm()
         {
-            Console.WriteLine("Film módosítása");
+            var filmFilePath = "films.json";
+            if (!File.Exists(filmFilePath))
+            {
+                Console.WriteLine("Nincsenek filmek.");
+                return;
+            }
+
+            var filmJson = File.ReadAllText(filmFilePath);
+            var filmek = JsonSerializer.Deserialize<List<Film>>(filmJson);
+
+            string filmCim;
+            while (true)
+            {
+                Console.Write("Add meg a film címét: ");
+                filmCim = Console.ReadLine();
+
+                if (!string.IsNullOrWhiteSpace(filmCim))
+                {
+                    break;
+                }
+
+                Console.WriteLine("Hiba: A cím megadása kötelező.");
+            }
+
+            var talaltFilmek = filmek
+                .Where(f => f.Cim.Equals(filmCim, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            if (!talaltFilmek.Any())
+            {
+                Console.WriteLine("Nincs ilyen című film.");
+                return;
+            }
+
+            if (talaltFilmek.Count > 1)
+            {
+                Console.WriteLine("Több ilyen című film található:");
+                for (int i = 0; i < talaltFilmek.Count; i++)
+                {
+                    Console.WriteLine($"{i + 1}. {talaltFilmek[i].Cim} - {talaltFilmek[i].Rendezo} - {talaltFilmek[i].KiadasEve}");
+                }
+
+                int filmIndex;
+                while (true)
+                {
+                    Console.Write("Add meg a módosítani kívánt film számát: ");
+                    if (int.TryParse(Console.ReadLine(), out filmIndex) && filmIndex > 0 && filmIndex <= talaltFilmek.Count)
+                    {
+                        filmIndex--; 
+                        break;
+                    }
+
+                    Console.WriteLine("Hiba: Érvénytelen szám.");
+                }
+
+                ModifyFilmDetails(talaltFilmek[filmIndex]);
+            }
+            else
+            {
+                ModifyFilmDetails(talaltFilmek[0]);
+            }
+
+            File.WriteAllText(filmFilePath, JsonSerializer.Serialize(filmek));
+            Console.WriteLine("A film adatai sikeresen módosítva.");
         }
 
         private static void ShowAllRents()
@@ -678,6 +798,64 @@ namespace VideoTeka
                 {
                     Console.WriteLine("Ezt nem értem.");
                 }
+            }
+        }
+
+        private static void ModifyFilmDetails(Film film)
+        {
+            Console.WriteLine("Melyik adatot szeretnéd módosítani?");
+            Console.WriteLine("1. Cím");
+            Console.WriteLine("2. Műfaj");
+            Console.WriteLine("3. Rendező");
+            Console.WriteLine("4. Hossz");
+            Console.WriteLine("5. Kiadás éve");
+            Console.WriteLine("6. Leírás");
+
+            int choice;
+            while (true)
+            {
+                Console.Write("Add meg a számot: ");
+                if (int.TryParse(Console.ReadLine(), out choice) && choice >= 1 && choice <= 6)
+                {
+                    break;
+                }
+
+                Console.WriteLine("Hiba: Érvénytelen szám.");
+            }
+
+            try
+            {
+                switch (choice)
+                {
+                    case 1:
+                        Console.Write("Új cím: ");
+                        film.Cim = Console.ReadLine();
+                        break;
+                    case 2:
+                        Console.Write("Új műfaj: ");
+                        film.Mufaj = Console.ReadLine();
+                        break;
+                    case 3:
+                        Console.Write("Új rendező: ");
+                        film.Rendezo = Console.ReadLine();
+                        break;
+                    case 4:
+                        Console.Write("Új hossz: ");
+                        film.Hossz = int.Parse(Console.ReadLine());
+                        break;
+                    case 5:
+                        Console.Write("Új kiadás éve: ");
+                        film.KiadasEve = int.Parse(Console.ReadLine());
+                        break;
+                    case 6:
+                        Console.Write("Új leírás: ");
+                        film.Leiras = Console.ReadLine();
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Hiba történt a módosítás során: {ex.Message}");
             }
         }
     }

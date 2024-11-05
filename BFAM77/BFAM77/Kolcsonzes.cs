@@ -27,10 +27,11 @@ namespace VideoTeka
         {
             if (Lezarult)
             {
-                Console.WriteLine($"Kölcsönző neve: {KolcsonzoNeve}\nKölcsönzött film: {KolcsonzottFilm.Cim}\nKölcsönzés dátuma: {KolcsonzesDatuma}\nHatáridő: {Hatarido}\nLezárt: Igen");
-            }else
+                Console.WriteLine($"\tKölcsönző neve: {KolcsonzoNeve}\n\tKölcsönzött film: {KolcsonzottFilm.Cim}\n\tKölcsönzés dátuma: {KolcsonzesDatuma}\n\tHatáridő: {Hatarido}\n\tLezárt: Igen");
+            }
+            else
             {
-                Console.WriteLine($"Kölcsönző neve: {KolcsonzoNeve}\nKölcsönzött film: {KolcsonzottFilm.Cim}\nKölcsönzés dátuma: {KolcsonzesDatuma}\nHatáridő: {Hatarido}\nLezárt: Nem");
+                Console.WriteLine($"\tKölcsönző neve: {KolcsonzoNeve}\n\tKölcsönzött film: {KolcsonzottFilm.Cim}\n\tKölcsönzés dátuma: {KolcsonzesDatuma}\n\tHatáridő: {Hatarido}\n\tLezárt: Nem");
             }
         }
     }
