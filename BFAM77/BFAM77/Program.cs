@@ -23,12 +23,11 @@ namespace VideoTeka
                 { "return_film", ReturnFilm },
                 { "search_film", SearchFilm },
                 { "delete_film", DeleteFilm },
-                { "modify_film", ModifyFilm },
                 { "show_all_rents", ShowAllRents },
                 { "show_unreturned_rents", ShowUnreturnedRents },
                 { "show_returned_rents", ShowReturnedRents },
                 { "show_overdue_rents", ShowOverdueRents },
-                { "show_active_rents", ShowActiveRents }, 
+                { "show_active_rents", ShowActiveRents },
                 { "search_rents", SearchRents },
                 { "exit", Exit }
             };
@@ -64,13 +63,12 @@ namespace VideoTeka
             Console.WriteLine("\treturn_film - Film visszahozása");
             Console.WriteLine("\tsearch_film - Film keresése");
             Console.WriteLine("\tdelete_film - Film törlése");
-            Console.WriteLine("\tmodify_film - Film módosítása");
             Console.WriteLine("\tshow_all_rents - Összes kölcsönzés megjelenítése");
             Console.WriteLine("\tshow_unreturned_rents - Vissza nem hozott kölcsönzések megjelenítése");
             Console.WriteLine("\tshow_returned_rents - Visszahozott kölcsönzések megjelenítése");
-            Console.WriteLine("\tshow_overdue_rents - Lejárt kölcsönzések megjelenítése(Amik lejártak, de még nem hozták őket vissza)");
-            Console.WriteLine("\tshow_active_rents - Aktív kölcsönzések megjelenítése(Amiket még nem hoztak vissza, és nem jártak le)");
-            Console.WriteLine("\tsearch_rents - Kölcsönzések keresése(a bérlő neve szerint)");
+            Console.WriteLine("\tshow_overdue_rents - Lejárt kölcsönzések megjelenítése (Amik lejártak, de még nem hozták őket vissza)");
+            Console.WriteLine("\tshow_active_rents - Aktív kölcsönzések megjelenítése (Amiket még nem hoztak vissza, és nem jártak le)");
+            Console.WriteLine("\tsearch_rents - Kölcsönzések keresése (a bérlő neve szerint)");
             Console.WriteLine("\texit - Kilépés az alkalmazásból");
         }
 
@@ -84,54 +82,61 @@ namespace VideoTeka
         {
             try
             {
-                var cim = InputHelper.GetStringInput("Film címe: ");
-                var mufaj = InputHelper.GetStringInput("Műfaj: ");
-                var rendezo = InputHelper.GetStringInput("Rendező: ");
-                var kiadasEve = InputHelper.GetIntInput("Kiadás éve: ");
-                var hossz = InputHelper.GetIntInput("Hossz (percben): ");
-                var leiras = InputHelper.GetStringInput("Leírás: ");
-                var elerheto = InputHelper.GetBoolInput("Elérhető (igen/nem): ");
+                string cim = InputHelper.GetStringInput("Add meg a film címét:");
+                string mufaj = InputHelper.GetStringInput("Add meg a film műfaját:");
+                string rendezo = InputHelper.GetStringInput("Add meg a film rendezőjét:");
+                int hossz = InputHelper.GetIntInput("Add meg a film hosszát (percben):");
+                int kiadasEve;
 
-                var newFilm = new Film
+                while (true)
                 {
-                    Cim = cim,
-                    Mufaj = mufaj,
-                    Rendezo = rendezo,
-                    KiadasEve = kiadasEve,
-                    Hossz = hossz,
-                    Leiras = leiras,
-                    Elerheto = elerheto
-                };
-
-                var filePath = "films.json";
-                var films = new List<Film>();
-
-                if (File.Exists(filePath))
-                {
-                    var json = File.ReadAllText(filePath);
-                    films = JsonSerializer.Deserialize<List<Film>>(json);
+                    kiadasEve = InputHelper.GetIntInput("Add meg a film kiadás évét:");
+                    if (kiadasEve <= DateTime.Now.Year)
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Hiba: A kiadás éve nem lehet nagyobb, mint {DateTime.Now.Year}!");
+                    }
                 }
 
-                if (films.Any(f => f.Cim.Equals(newFilm.Cim, StringComparison.OrdinalIgnoreCase) &&
-                                   f.Mufaj.Equals(newFilm.Mufaj, StringComparison.OrdinalIgnoreCase) &&
-                                   f.Rendezo.Equals(newFilm.Rendezo, StringComparison.OrdinalIgnoreCase) &&
-                                   f.KiadasEve == newFilm.KiadasEve &&
-                                   f.Hossz == newFilm.Hossz &&
-                                   f.Leiras.Equals(newFilm.Leiras, StringComparison.OrdinalIgnoreCase)))
+                string leiras = InputHelper.GetStringInput("Add meg a film leírását:");
+
+                var newFilm = new Film(cim, mufaj, rendezo, hossz, kiadasEve, leiras);
+                var filmWithAvailability = new FilmWithAvailability(newFilm, true);
+
+                string filmsFilePath = "films.json";
+
+                List<FilmWithAvailability> filmsWithAvailability = new List<FilmWithAvailability>();
+
+                if (File.Exists(filmsFilePath))
                 {
-                    Console.WriteLine("Hiba: Már létezik ilyen film.");
+                    string existingFilmsWithAvailabilityJson = File.ReadAllText(filmsFilePath);
+                    filmsWithAvailability = JsonSerializer.Deserialize<List<FilmWithAvailability>>(existingFilmsWithAvailabilityJson);
+                }
+
+                if (filmsWithAvailability.Any(f => f.Film.Cim.Equals(cim, StringComparison.OrdinalIgnoreCase) &&
+                                                   f.Film.Mufaj.Equals(mufaj, StringComparison.OrdinalIgnoreCase) &&
+                                                   f.Film.Rendezo.Equals(rendezo, StringComparison.OrdinalIgnoreCase) &&
+                                                   f.Film.Hossz == hossz &&
+                                                   f.Film.KiadasEve == kiadasEve &&
+                                                   f.Film.Leiras.Equals(leiras, StringComparison.OrdinalIgnoreCase)))
+                {
+                    Console.WriteLine("Már létezik ilyen film a rendszerben.");
                     return;
                 }
 
-                films.Add(newFilm);
-                var updatedJson = JsonSerializer.Serialize(films, new JsonSerializerOptions { WriteIndented = true });
-                File.WriteAllText(filePath, updatedJson);
+                filmsWithAvailability.Add(filmWithAvailability);
 
-                Console.WriteLine("Film sikeresen hozzáadva.");
+                string newFilmsWithAvailabilityJson = JsonSerializer.Serialize(filmsWithAvailability, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(filmsFilePath, newFilmsWithAvailabilityJson);
+
+                Console.WriteLine("A film sikeresen hozzáadva!");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Hiba történt: {ex.Message}");
+                Console.WriteLine($"Hiba történt a film hozzáadása során: {ex.Message}");
             }
         }
 
@@ -145,68 +150,68 @@ namespace VideoTeka
             }
 
             var json = File.ReadAllText(filePath);
-            var films = JsonSerializer.Deserialize<List<Film>>(json);
+            var filmsWithAvailability = JsonSerializer.Deserialize<List<FilmWithAvailability>>(json);
 
-            foreach (var film in films)
+            foreach (var filmWithAvailability in filmsWithAvailability)
             {
-                film.Adatok();
-                Console.WriteLine();
+                filmWithAvailability.Film.Adatok();
+                Console.WriteLine($"\tElérhető: {(filmWithAvailability.Elerheto ? "Igen" : "Nem")}\n");
             }
         }
 
         private static void ShowMinFilm()
         {
-            var filmFilePath = "films.json";
-            if (!File.Exists(filmFilePath))
+            var filePath = "films.json";
+            if (!File.Exists(filePath))
             {
                 Console.WriteLine("Nincsenek filmek.");
                 return;
             }
 
-            var filmJson = File.ReadAllText(filmFilePath);
-            var filmek = JsonSerializer.Deserialize<List<Film>>(filmJson);
+            var json = File.ReadAllText(filePath);
+            var filmsWithAvailability = JsonSerializer.Deserialize<List<FilmWithAvailability>>(json);
 
-            if (filmek == null || !filmek.Any())
+            if (filmsWithAvailability == null || !filmsWithAvailability.Any())
             {
                 Console.WriteLine("Nincsenek filmek.");
                 return;
             }
 
-            var legrövidebbFilmHossz = filmek.Min(f => f.Hossz);
-            var legrövidebbFilmek = filmek.Where(f => f.Hossz == legrövidebbFilmHossz).ToList();
+            var legrövidebbFilmHossz = filmsWithAvailability.Min(f => f.Film.Hossz);
+            var legrövidebbFilmek = filmsWithAvailability.Where(f => f.Film.Hossz == legrövidebbFilmHossz).ToList();
 
             Console.WriteLine($"Legrövidebb film(ek) ({legrövidebbFilmHossz} perc):");
-            foreach (var film in legrövidebbFilmek)
+            foreach (var filmWithAvailability in legrövidebbFilmek)
             {
-                Console.WriteLine($"\t{film.Cim} - {film.Rendezo}\n");
+                Console.WriteLine($"\t{filmWithAvailability.Film.Cim} - {filmWithAvailability.Film.Rendezo}\n");
             }
         }
 
         private static void ShowMaxFilm()
         {
-            var filmFilePath = "films.json";
-            if (!File.Exists(filmFilePath))
+            var filePath = "films.json";
+            if (!File.Exists(filePath))
             {
                 Console.WriteLine("Nincsenek filmek.");
                 return;
             }
 
-            var filmJson = File.ReadAllText(filmFilePath);
-            var filmek = JsonSerializer.Deserialize<List<Film>>(filmJson);
+            var json = File.ReadAllText(filePath);
+            var filmsWithAvailability = JsonSerializer.Deserialize<List<FilmWithAvailability>>(json);
 
-            if (filmek == null || !filmek.Any())
+            if (filmsWithAvailability == null || !filmsWithAvailability.Any())
             {
                 Console.WriteLine("Nincsenek filmek.");
                 return;
             }
 
-            var leghosszabbFilmHossz = filmek.Max(f => f.Hossz);
-            var leghosszabbFilmek = filmek.Where(f => f.Hossz == leghosszabbFilmHossz).ToList();
+            var leghosszabbFilmHossz = filmsWithAvailability.Max(f => f.Film.Hossz);
+            var leghosszabbFilmek = filmsWithAvailability.Where(f => f.Film.Hossz == leghosszabbFilmHossz).ToList();
 
             Console.WriteLine($"Leghosszabb film(ek) ({leghosszabbFilmHossz} perc):");
-            foreach (var film in leghosszabbFilmek)
+            foreach (var filmWithAvailability in leghosszabbFilmek)
             {
-                Console.WriteLine($"\t{film.Cim} - {film.Rendezo}\n");
+                Console.WriteLine($"\t{filmWithAvailability.Film.Cim} - {filmWithAvailability.Film.Rendezo}\n");
             }
         }
 
@@ -249,9 +254,9 @@ namespace VideoTeka
             }
 
             var json = File.ReadAllText(filePath);
-            var films = JsonSerializer.Deserialize<List<Film>>(json);
+            var filmsWithAvailability = JsonSerializer.Deserialize<List<FilmWithAvailability>>(json);
 
-            var matchingFilms = films.Where(f => f.Cim.Equals(cim, StringComparison.OrdinalIgnoreCase)).ToList();
+            var matchingFilms = filmsWithAvailability.Where(f => f.Film.Cim.Equals(cim, StringComparison.OrdinalIgnoreCase)).ToList();
 
             if (!matchingFilms.Any())
             {
@@ -276,7 +281,7 @@ namespace VideoTeka
                 Console.WriteLine("Több elérhető film található:");
                 for (int i = 0; i < availableFilms.Count; i++)
                 {
-                    Console.WriteLine($"{i + 1}. {availableFilms[i].Cim} - {availableFilms[i].Rendezo} ({availableFilms[i].KiadasEve})");
+                    Console.WriteLine($"{i + 1}. {availableFilms[i].Film.Cim} - {availableFilms[i].Film.Rendezo} ({availableFilms[i].Film.KiadasEve})");
                 }
 
                 Console.Write("Válassz egy filmet a szám alapján: ");
@@ -353,14 +358,17 @@ namespace VideoTeka
 
                 selectedKolcsonzes.Lezarult = true;
 
-                var filmJson = File.ReadAllText(filePath);
-                var films = JsonSerializer.Deserialize<List<Film>>(filmJson);
+                var filmsJson = File.ReadAllText(filePath);
+                var filmsWithAvailability = JsonSerializer.Deserialize<List<FilmWithAvailability>>(filmsJson);
 
-                var filmToUpdate = films.First(f => f.Cim.Equals(selectedKolcsonzes.KolcsonzottFilm.Cim, StringComparison.OrdinalIgnoreCase));
-                filmToUpdate.Elerheto = true;
+                var filmToUpdate = filmsWithAvailability.First(f => f.Film.Cim.Equals(selectedKolcsonzes.KolcsonzottFilm.Cim, StringComparison.OrdinalIgnoreCase));
+                var updatedFilmWithAvailability = new FilmWithAvailability(filmToUpdate.Film, true);
 
-                var updatedFilmJson = JsonSerializer.Serialize(films, new JsonSerializerOptions { WriteIndented = true });
-                File.WriteAllText(filePath, updatedFilmJson);
+                filmsWithAvailability.Remove(filmToUpdate);
+                filmsWithAvailability.Add(updatedFilmWithAvailability);
+
+                var updatedFilmsJson = JsonSerializer.Serialize(filmsWithAvailability, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(filePath, updatedFilmsJson);
 
                 var updatedKolcsonzesJson = JsonSerializer.Serialize(kolcsonzesek, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(kolcsonzesFilePath, updatedKolcsonzesJson);
@@ -397,9 +405,9 @@ namespace VideoTeka
             }
 
             var json = File.ReadAllText(filePath);
-            var films = JsonSerializer.Deserialize<List<Film>>(json);
+            var filmsWithAvailability = JsonSerializer.Deserialize<List<FilmWithAvailability>>(json);
 
-            var matchingFilms = films.Where(f => f.Cim.Equals(cim, StringComparison.OrdinalIgnoreCase)).ToList();
+            var matchingFilms = filmsWithAvailability.Where(f => f.Film.Cim.Equals(cim, StringComparison.OrdinalIgnoreCase)).ToList();
 
             if (!matchingFilms.Any())
             {
@@ -408,10 +416,10 @@ namespace VideoTeka
             else
             {
                 Console.WriteLine("Talált filmek:");
-                foreach (var film in matchingFilms)
+                foreach (var filmWithAvailability in matchingFilms)
                 {
-                    film.Adatok();
-                    Console.WriteLine();
+                    filmWithAvailability.Film.Adatok();
+                    Console.WriteLine($"\tElérhető: {(filmWithAvailability.Elerheto ? "Igen" : "Nem")}\n");
                 }
             }
         }
@@ -419,6 +427,7 @@ namespace VideoTeka
         private static void DeleteFilm()
         {
             var filePath = "films.json";
+
             if (!File.Exists(filePath))
             {
                 Console.WriteLine("Nincsenek elérhető filmek.");
@@ -439,10 +448,10 @@ namespace VideoTeka
                 Console.WriteLine("Hiba: A cím megadása kötelező.");
             }
 
-            var json = File.ReadAllText(filePath);
-            var films = JsonSerializer.Deserialize<List<Film>>(json);
+            var filmsJson = File.ReadAllText(filePath);
+            var filmsWithAvailability = JsonSerializer.Deserialize<List<FilmWithAvailability>>(filmsJson);
 
-            var matchingFilms = films.Where(f => f.Cim.Equals(cim, StringComparison.OrdinalIgnoreCase)).ToList();
+            var matchingFilms = filmsWithAvailability.Where(f => f.Film.Cim.Equals(cim, StringComparison.OrdinalIgnoreCase)).ToList();
 
             if (!matchingFilms.Any())
             {
@@ -452,96 +461,28 @@ namespace VideoTeka
 
             if (matchingFilms.Count == 1)
             {
-                var film = matchingFilms.First();
-                ConfirmAndDeleteFilm(film, films, filePath);
+                var filmWithAvailability = matchingFilms.First();
+                ConfirmAndDeleteFilm(filmWithAvailability, filmsWithAvailability, filePath);
             }
             else
             {
                 Console.WriteLine("Több ilyen című film található:");
                 for (int i = 0; i < matchingFilms.Count; i++)
                 {
-                    Console.WriteLine($"{i + 1}. {matchingFilms[i].Cim} - {matchingFilms[i].Rendezo} ({matchingFilms[i].KiadasEve})");
+                    Console.WriteLine($"{i + 1}. {matchingFilms[i].Film.Cim} - {matchingFilms[i].Film.Rendezo} ({matchingFilms[i].Film.KiadasEve})");
                 }
 
                 Console.Write("Válassz egy filmet a szám alapján: ");
                 if (int.TryParse(Console.ReadLine(), out int selectedIndex) && selectedIndex > 0 && selectedIndex <= matchingFilms.Count)
                 {
-                    var selectedFilm = matchingFilms[selectedIndex - 1];
-                    ConfirmAndDeleteFilm(selectedFilm, films, filePath);
+                    var selectedFilmWithAvailability = matchingFilms[selectedIndex - 1];
+                    ConfirmAndDeleteFilm(selectedFilmWithAvailability, filmsWithAvailability, filePath);
                 }
                 else
                 {
                     Console.WriteLine("Érvénytelen választás.");
                 }
             }
-        }
-
-        private static void ModifyFilm()
-        {
-            var filmFilePath = "films.json";
-            if (!File.Exists(filmFilePath))
-            {
-                Console.WriteLine("Nincsenek filmek.");
-                return;
-            }
-
-            var filmJson = File.ReadAllText(filmFilePath);
-            var filmek = JsonSerializer.Deserialize<List<Film>>(filmJson);
-
-            string filmCim;
-            while (true)
-            {
-                Console.Write("Add meg a film címét: ");
-                filmCim = Console.ReadLine();
-
-                if (!string.IsNullOrWhiteSpace(filmCim))
-                {
-                    break;
-                }
-
-                Console.WriteLine("Hiba: A cím megadása kötelező.");
-            }
-
-            var talaltFilmek = filmek
-                .Where(f => f.Cim.Equals(filmCim, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-
-            if (!talaltFilmek.Any())
-            {
-                Console.WriteLine("Nincs ilyen című film.");
-                return;
-            }
-
-            if (talaltFilmek.Count > 1)
-            {
-                Console.WriteLine("Több ilyen című film található:");
-                for (int i = 0; i < talaltFilmek.Count; i++)
-                {
-                    Console.WriteLine($"{i + 1}. {talaltFilmek[i].Cim} - {talaltFilmek[i].Rendezo} - {talaltFilmek[i].KiadasEve}");
-                }
-
-                int filmIndex;
-                while (true)
-                {
-                    Console.Write("Add meg a módosítani kívánt film számát: ");
-                    if (int.TryParse(Console.ReadLine(), out filmIndex) && filmIndex > 0 && filmIndex <= talaltFilmek.Count)
-                    {
-                        filmIndex--; 
-                        break;
-                    }
-
-                    Console.WriteLine("Hiba: Érvénytelen szám.");
-                }
-
-                ModifyFilmDetails(talaltFilmek[filmIndex]);
-            }
-            else
-            {
-                ModifyFilmDetails(talaltFilmek[0]);
-            }
-
-            File.WriteAllText(filmFilePath, JsonSerializer.Serialize(filmek));
-            Console.WriteLine("A film adatai sikeresen módosítva.");
         }
 
         private static void ShowAllRents()
@@ -737,18 +678,19 @@ namespace VideoTeka
             }
         }
 
-        private static void RentSelectedFilm(Film film, string kolcsonzoNeve)
+        private static void RentSelectedFilm(FilmWithAvailability filmWithAvailability, string kolcsonzoNeve)
         {
-            film.Elerheto = false;
-
             var filePath = "films.json";
             var json = File.ReadAllText(filePath);
-            var films = JsonSerializer.Deserialize<List<Film>>(json);
+            var filmsWithAvailability = JsonSerializer.Deserialize<List<FilmWithAvailability>>(json);
 
-            var filmToUpdate = films.First(f => f.Cim.Equals(film.Cim, StringComparison.OrdinalIgnoreCase));
-            filmToUpdate.Elerheto = false;
+            var filmToUpdate = filmsWithAvailability.First(f => f.Film.Cim.Equals(filmWithAvailability.Film.Cim, StringComparison.OrdinalIgnoreCase));
+            var updatedFilmWithAvailability = new FilmWithAvailability(filmToUpdate.Film, false);
 
-            var updatedJson = JsonSerializer.Serialize(films, new JsonSerializerOptions { WriteIndented = true });
+            filmsWithAvailability.Remove(filmToUpdate);
+            filmsWithAvailability.Add(updatedFilmWithAvailability);
+
+            var updatedJson = JsonSerializer.Serialize(filmsWithAvailability, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(filePath, updatedJson);
 
             var kolcsonzesFilePath = "kolcsonzesek.json";
@@ -760,7 +702,7 @@ namespace VideoTeka
                 kolcsonzesek = JsonSerializer.Deserialize<List<Kolcsonzes>>(kolcsonzesJson);
             }
 
-            var newKolcsonzes = new Kolcsonzes(film, DateTime.Now, DateTime.Now.AddDays(7))
+            var newKolcsonzes = new Kolcsonzes(filmWithAvailability.Film, DateTime.Now, DateTime.Now.AddDays(7))
             {
                 KolcsonzoNeve = kolcsonzoNeve
             };
@@ -772,20 +714,21 @@ namespace VideoTeka
             Console.WriteLine("A film sikeresen kibérelve.");
         }
 
-        private static void ConfirmAndDeleteFilm(Film film, List<Film> films, string filePath)
+        private static void ConfirmAndDeleteFilm(FilmWithAvailability filmWithAvailability, List<FilmWithAvailability> filmsWithAvailability, string filePath)
         {
             while (true)
             {
                 Console.WriteLine("Biztosan törölni szeretnéd a következő filmet?");
-                film.Adatok();
+                filmWithAvailability.Film.Adatok();
                 Console.Write("('igen' vagy 'nem'): ");
                 var confirmation = Console.ReadLine();
 
                 if (confirmation.Equals("igen", StringComparison.OrdinalIgnoreCase))
                 {
-                    films.Remove(film);
-                    var updatedJson = JsonSerializer.Serialize(films, new JsonSerializerOptions { WriteIndented = true });
-                    File.WriteAllText(filePath, updatedJson);
+                    filmsWithAvailability.Remove(filmWithAvailability);
+                    var updatedFilmsJson = JsonSerializer.Serialize(filmsWithAvailability, new JsonSerializerOptions { WriteIndented = true });
+                    File.WriteAllText(filePath, updatedFilmsJson);
+
                     Console.WriteLine("Film sikeresen törölve.");
                     return;
                 }
@@ -798,64 +741,6 @@ namespace VideoTeka
                 {
                     Console.WriteLine("Ezt nem értem.");
                 }
-            }
-        }
-
-        private static void ModifyFilmDetails(Film film)
-        {
-            Console.WriteLine("Melyik adatot szeretnéd módosítani?");
-            Console.WriteLine("1. Cím");
-            Console.WriteLine("2. Műfaj");
-            Console.WriteLine("3. Rendező");
-            Console.WriteLine("4. Hossz");
-            Console.WriteLine("5. Kiadás éve");
-            Console.WriteLine("6. Leírás");
-
-            int choice;
-            while (true)
-            {
-                Console.Write("Add meg a számot: ");
-                if (int.TryParse(Console.ReadLine(), out choice) && choice >= 1 && choice <= 6)
-                {
-                    break;
-                }
-
-                Console.WriteLine("Hiba: Érvénytelen szám.");
-            }
-
-            try
-            {
-                switch (choice)
-                {
-                    case 1:
-                        Console.Write("Új cím: ");
-                        film.Cim = Console.ReadLine();
-                        break;
-                    case 2:
-                        Console.Write("Új műfaj: ");
-                        film.Mufaj = Console.ReadLine();
-                        break;
-                    case 3:
-                        Console.Write("Új rendező: ");
-                        film.Rendezo = Console.ReadLine();
-                        break;
-                    case 4:
-                        Console.Write("Új hossz: ");
-                        film.Hossz = int.Parse(Console.ReadLine());
-                        break;
-                    case 5:
-                        Console.Write("Új kiadás éve: ");
-                        film.KiadasEve = int.Parse(Console.ReadLine());
-                        break;
-                    case 6:
-                        Console.Write("Új leírás: ");
-                        film.Leiras = Console.ReadLine();
-                        break;
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Hiba történt a módosítás során: {ex.Message}");
             }
         }
     }
